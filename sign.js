@@ -1,4 +1,5 @@
 // signin.js
+
 import { auth, database } from './firebaseConfig.js';
 import {
   createUserWithEmailAndPassword,
@@ -15,68 +16,70 @@ document.addEventListener('DOMContentLoaded', () => {
   const signUpButton = document.getElementById('signUp');
   const signInButton = document.getElementById('signIn');
 
-  // ✅ SIGN UP
-  signUpButton.addEventListener('click', () => {
+  // Sign Up handler
+  signUpButton.addEventListener('click', async () => {
     const email = emailInput.value.trim();
-    const password = passwordInput.value;
+    const password = passwordInput.value.trim();
     const username = usernameInput.value.trim();
 
-    if (!username) {
-      alert('Please enter a username');
+    if (!email || !password || !username) {
+      alert('Please fill out all fields');
       return;
     }
 
-    createUserWithEmailAndPassword(auth, email, password)
-      .then(async (userCredential) => {
-        const user = userCredential.user;
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-        // Set the display name
-        await updateProfile(user, { displayName: username });
+      // Set the displayName in Firebase Auth
+      await updateProfile(user, { displayName: username });
 
-        // Optional: Save username in database
-        await set(ref(database, 'usernames/' + user.uid), username);
+      // Optionally save the username in Realtime Database too
+      await set(ref(database, 'usernames/' + user.uid), username);
 
-        console.log('User signed up and username set:', user.displayName);
-        window.location.href = 'home.html';
-      })
-      .catch((error) => {
-        console.error('Error signing up:', error.message);
-        alert(error.message);
-      });
+      console.log('User signed up and username saved');
+      window.location.href = 'home.html';
+    } catch (error) {
+      console.error('Sign-up error:', error.message);
+      alert(error.message);
+    }
   });
 
-  // ✅ SIGN IN
-  signInButton.addEventListener('click', () => {
+  // Sign In handler
+  signInButton.addEventListener('click', async () => {
     const email = emailInput.value.trim();
-    const password = passwordInput.value;
+    const password = passwordInput.value.trim();
 
-    signInWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        const user = userCredential.user;
-        console.log('User signed in:', user);
-        window.location.href = 'home.html';
-      })
-      .catch((error) => {
-        console.error('Error signing in:', error.message);
-        alert(error.message);
-      });
+    if (!email || !password) {
+      alert('Please enter email and password');
+      return;
+    }
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Prompt for username if it doesn't exist
+      if (!user.displayName) {
+        const username = prompt('Please enter a username:');
+        if (username) {
+          await updateProfile(user, { displayName: username });
+          await set(ref(database, 'usernames/' + user.uid), username);
+        }
+      }
+
+      window.location.href = 'home.html';
+    } catch (error) {
+      console.error('Sign-in error:', error.message);
+      alert(error.message);
+    }
   });
 
-  // ✅ AUTH STATE CHECK
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      console.log('User is signed in:', user);
-      if (!user.displayName) {
-        const name = prompt("Please set a username:");
-        if (name) {
-          updateProfile(user, { displayName: name }).then(() => {
-            set(ref(database, 'usernames/' + user.uid), name);
-            window.location.href = 'home.html';
-          });
-        }
-      } else {
-        window.location.href = 'home.html';
-      }
+  // Optional: auto-redirect if already signed in and has displayName
+  onAuthStateChanged(auth, user => {
+    if (user && user.displayName) {
+      console.log('Already signed in as', user.displayName);
+      window.location.href = 'home.html';
     }
   });
 });
