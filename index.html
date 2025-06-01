@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign In</title>
+  <link rel="stylesheet" href="signup.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#3b4cca" />
+</head>
+<body>
+  <div class="auth-container">
+    <h2>Sign Up / Sign In</h2>
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Password" />
+    <input type="text" id="username" placeholder="Username" />
+    <button id="signUp">Sign Up</button>
+    <button id="signIn">Sign In</button>
+    <button id="signOut">Sign Out</button>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+
+  <!-- Your Firebase config and app logic -->
+  <script type="module" src="firebaseConfig.js"></script>
+  <script type="module" src="signin.js"></script>
+
+  <!-- Service worker registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('service-worker.js')
+        .then((reg) => console.log('Service Worker registered:', reg.scope))
+        .catch((err) => console.error('Service Worker failed:', err));
+    }
+  </script>
+</body>
+</html>
