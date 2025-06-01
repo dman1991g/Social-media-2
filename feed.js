@@ -126,6 +126,6 @@ onChildAdded(postFeedRef, async (snapshot) => {
 // Sign out
 signOutBtn.addEventListener('click', () => {
     signOut(auth).then(() => {
-        window.location.href = 'signin.html';
+        window.location.href = 'index.html';
     });
 });
