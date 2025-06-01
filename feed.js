@@ -9,13 +9,76 @@ const submitPost = document.getElementById('submitPost');
 const postsDiv = document.getElementById('posts');
 const signOutBtn = document.getElementById('signOut');
 
+const toggleImageUploadBtn = document.getElementById('toggleImageUpload');
+const emojiButton = document.getElementById('emojiButton');
+const sendImageBtn = document.getElementById('sendImage');
+const emojiPickerDiv = document.getElementById('emojiPicker');
+
 onAuthStateChanged(auth, user => {
     if (!user) {
         window.location.href = 'signin.html'; // Redirect if not signed in
     }
 });
 
-// Create a post
+// Toggle Image Upload input visibility
+toggleImageUploadBtn.addEventListener('click', () => {
+    if (postImage.style.display === 'none' || !postImage.style.display) {
+        postImage.style.display = 'block';
+        sendImageBtn.style.display = 'inline-block';
+    } else {
+        postImage.style.display = 'none';
+        sendImageBtn.style.display = 'none';
+    }
+});
+
+// Basic emoji picker setup (using emoji-mart)
+let pickerVisible = false;
+emojiButton.addEventListener('click', () => {
+    if (!pickerVisible) {
+        // Create emoji picker if not exists
+        if (!emojiPickerDiv.hasChildNodes()) {
+            const picker = new EmojiMart.Picker({ 
+                onEmojiSelect: (emoji) => {
+                    postContent.value += emoji.native;
+                }
+            });
+            emojiPickerDiv.appendChild(picker);
+        }
+        emojiPickerDiv.classList.remove('hidden');
+        pickerVisible = true;
+    } else {
+        emojiPickerDiv.classList.add('hidden');
+        pickerVisible = false;
+    }
+});
+
+// Send image as a post (same as clicking post with image selected)
+sendImageBtn.addEventListener('click', async () => {
+    if (!postImage.files.length) return;
+
+    const image = postImage.files[0];
+    const postRef = dbRef(database, 'posts');
+    const newPost = {
+        uid: auth.currentUser.uid,
+        content: '', // No text content
+        timestamp: Date.now(),
+        username: auth.currentUser.displayName || 'Anonymous'
+    };
+
+    const postKey = push(postRef, newPost).key;
+
+    const imgRef = storageRef(storage, `postImages/${postKey}`);
+    await uploadBytes(imgRef, image);
+    const imageURL = await getDownloadURL(imgRef);
+
+    await push(dbRef(database, `posts/${postKey}/image`), imageURL);
+
+    postImage.value = '';
+    postImage.style.display = 'none';
+    sendImageBtn.style.display = 'none';
+});
+
+// Create a post (text and optional image)
 submitPost.addEventListener('click', async () => {
     const content = postContent.value;
     const image = postImage.files[0];
@@ -41,9 +104,11 @@ submitPost.addEventListener('click', async () => {
 
     postContent.value = '';
     postImage.value = '';
+    postImage.style.display = 'none';
+    sendImageBtn.style.display = 'none';
 });
 
-// Load posts
+// Load posts and display them
 const postFeedRef = dbRef(database, 'posts');
 onChildAdded(postFeedRef, async (snapshot) => {
     const post = snapshot.val();
