@@ -1,0 +1,143 @@
+/* General styles */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f1f1f1;
+}
+
+.app {
+    display: flex;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 250px;
+    background-color: #f0f0f0;
+    padding: 10px;
+    box-shadow: 1px 0 5px rgba(0, 0, 0, 0.1);
+    transition: width 0.3s ease;
+}
+
+.sidebar.collapsed {
+    width: 0;
+    overflow: hidden;
+    transition: width 0.3s ease;
+}
+
+/* Content */
+.content {
+    flex: 1;
+    padding: 20px;
+    background-color: white;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* New post input section */
+.new-post {
+    background-color: #fff;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+}
+
+#postInput {
+    padding: 10px;
+    resize: vertical;
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+/* Post feed section */
+.post-feed {
+    border-top: 1px solid #ddd;
+}
+
+/* Individual post */
+.post {
+    background-color: #fff;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.post .author {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.post .content {
+    margin: 10px 0;
+}
+
+.post .timestamp {
+    font-size: 0.85em;
+    color: gray;
+}
+
+.post .actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.post .actions button {
+    flex: 1;
+    margin: 0 5px;
+    background-color: #e0e0e0;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+}
+
+.post .actions button:hover {
+    background-color: #d0d0d0;
+}
+
+/* Button styles */
+button {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0;
+    box-sizing: border-box;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+/* Toggle and Sign Out buttons in sidebar */
+.sidebar button {
+    margin-bottom: 10px;
+}
+
+/* Hidden class for toggling visibility */
+.hidden {
+    display: none;
+}
+
+/* Responsive enhancements (optional) */
+@media (max-width: 768px) {
+    .app {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+    }
+
+    .sidebar.collapsed {
+        width: 0;
+        height: 0;
+    }
+}
