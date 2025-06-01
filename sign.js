@@ -1,10 +1,10 @@
 // signin.js
-
 import { auth, database } from './firebaseConfig.js';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  onAuthStateChanged
+  onAuthStateChanged,
+  updateProfile
 } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js';
 import { ref, set } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
 
@@ -15,53 +15,68 @@ document.addEventListener('DOMContentLoaded', () => {
   const signUpButton = document.getElementById('signUp');
   const signInButton = document.getElementById('signIn');
 
-  // Sign Up handler
+  // ✅ SIGN UP
   signUpButton.addEventListener('click', () => {
-    const email = emailInput.value;
+    const email = emailInput.value.trim();
     const password = passwordInput.value;
-    const username = usernameInput.value;
+    const username = usernameInput.value.trim();
+
+    if (!username) {
+      alert('Please enter a username');
+      return;
+    }
 
     createUserWithEmailAndPassword(auth, email, password)
-      .then(userCredential => {
+      .then(async (userCredential) => {
         const user = userCredential.user;
-        console.log('User signed up:', user);
 
-        return user.updateProfile({ displayName: username }).then(() => user);
+        // Set the display name
+        await updateProfile(user, { displayName: username });
+
+        // Optional: Save username in database
+        await set(ref(database, 'usernames/' + user.uid), username);
+
+        console.log('User signed up and username set:', user.displayName);
+        window.location.href = 'home.html';
       })
-      .then(user => {
-        return set(ref(database, 'usernames/' + user.uid), username);
-      })
-      .then(() => {
-        console.log('Username saved to database successfully');
-      })
-      .catch(error => {
+      .catch((error) => {
         console.error('Error signing up:', error.message);
+        alert(error.message);
       });
   });
 
-  // Sign In handler
+  // ✅ SIGN IN
   signInButton.addEventListener('click', () => {
-    const email = emailInput.value;
+    const email = emailInput.value.trim();
     const password = passwordInput.value;
 
     signInWithEmailAndPassword(auth, email, password)
-      .then(userCredential => {
+      .then((userCredential) => {
         const user = userCredential.user;
         console.log('User signed in:', user);
-        window.location.href = "home.html"; // Redirect to your chat page or dashboard
+        window.location.href = 'home.html';
       })
-      .catch(error => {
+      .catch((error) => {
         console.error('Error signing in:', error.message);
+        alert(error.message);
       });
   });
 
-  // Monitor auth state
-  onAuthStateChanged(auth, user => {
+  // ✅ AUTH STATE CHECK
+  onAuthStateChanged(auth, (user) => {
     if (user) {
       console.log('User is signed in:', user);
-      window.location.href = "home.html"; // Redirect if already signed in
-    } else {
-      console.log('User is signed out');
+      if (!user.displayName) {
+        const name = prompt("Please set a username:");
+        if (name) {
+          updateProfile(user, { displayName: name }).then(() => {
+            set(ref(database, 'usernames/' + user.uid), name);
+            window.location.href = 'home.html';
+          });
+        }
+      } else {
+        window.location.href = 'home.html';
+      }
     }
   });
 });
