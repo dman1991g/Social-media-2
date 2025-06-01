@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .then(userCredential => {
         const user = userCredential.user;
         console.log('User signed in:', user);
-        window.location.href = 'chat.html'; // Redirect to your chat page or dashboard
+        window.location.href = 'home.html'; // Redirect to your chat page or dashboard
       })
       .catch(error => {
         console.error('Error signing in:', error.message);
@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
   onAuthStateChanged(auth, user => {
     if (user) {
       console.log('User is signed in:', user);
-      window.location.href = 'chat.html'; // Redirect if already signed in
+      window.location.href = 'home.html'; // Redirect if already signed in
     } else {
       console.log('User is signed out');
     }
