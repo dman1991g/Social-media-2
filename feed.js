@@ -1,13 +1,14 @@
 import { auth, database, storage } from './firebaseConfig.js';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js';
-import { ref as dbRef, push, update, onChildAdded } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
+import { ref as dbRef, push, set, update, onChildAdded } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js';
 
-const postContent = document.getElementById('postInput');    // textarea for post text
-const postImage = document.getElementById('imageInput');      // file input for image
-const submitPost = document.getElementById('postButton');     // button to submit post
-const postsDiv = document.getElementById('postFeed');         // container div for posts
-const signOutBtn = document.getElementById('signOut');
+// Match these to your HTML
+const postContent = document.getElementById('postContent');    // textarea
+const postImage = document.getElementById('postImage');        // file input
+const submitPost = document.getElementById('submitPost');      // post button
+const postsDiv = document.getElementById('posts');             // container for posts
+const signOutBtn = document.getElementById('signOut');         // sign out button
 
 onAuthStateChanged(auth, user => {
     if (!user) {
@@ -15,17 +16,16 @@ onAuthStateChanged(auth, user => {
     }
 });
 
-// Create a post with optional image upload
+// Submit post (text + optional image)
 submitPost.addEventListener('click', async () => {
     const content = postContent.value.trim();
     const imageFile = postImage.files[0];
 
-    if (!content && !imageFile) return; // Don't post empty content
+    if (!content && !imageFile) return; // Don't post empty
 
     const user = auth.currentUser;
     if (!user) return;
 
-    // Create a new post entry with initial data
     const postRef = push(dbRef(database, 'posts'));
     const postKey = postRef.key;
 
@@ -39,23 +39,18 @@ submitPost.addEventListener('click', async () => {
     await set(postRef, newPost);
 
     if (imageFile) {
-        // Upload image to storage
         const imgRef = storageRef(storage, `postImages/${postKey}`);
         await uploadBytes(imgRef, imageFile);
-
-        // Get image URL
         const imageURL = await getDownloadURL(imgRef);
-
-        // Update post with image URL
         await update(postRef, { imageURL });
     }
 
-    // Clear inputs after posting
+    // Clear input fields
     postContent.value = '';
     postImage.value = '';
 });
 
-// Load and display posts in realtime
+// Realtime feed listener
 const postFeedRef = dbRef(database, 'posts');
 onChildAdded(postFeedRef, (snapshot) => {
     const post = snapshot.val();
@@ -66,14 +61,14 @@ onChildAdded(postFeedRef, (snapshot) => {
     postElement.innerHTML = `
         <strong>${post.username}</strong><br/>
         <p>${post.content}</p>
-        ${post.imageURL ? `<img src="${post.imageURL}" alt="Post image" style="max-width: 300px; max-height: 300px;"/>` : ''}
+        ${post.imageURL ? `<img src="${post.imageURL}" alt="Post image" style="max-width: 300px; max-height: 300px;" />` : ''}
         <small>${new Date(post.timestamp).toLocaleString()}</small>
     `;
 
     postsDiv.prepend(postElement);
 });
 
-// Sign out functionality
+// Sign out
 signOutBtn.addEventListener('click', () => {
     signOut(auth).then(() => {
         window.location.href = 'index.html';
