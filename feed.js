@@ -1,99 +1,71 @@
 import { auth, database, storage } from './firebaseConfig.js';
-import {
-    onAuthStateChanged, signOut
-} from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js';
-import {
-    ref as dbRef, push, onChildAdded, update, set
-} from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
-import {
-    ref as storageRef, uploadBytes, getDownloadURL
-} from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js';
+import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js';
+import { ref as dbRef, push, set, update, onChildAdded } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js';
 
-const postInput = document.getElementById('postInput');
-const postButton = document.getElementById('postButton');
-const imageInput = document.getElementById('imageInput');
-const toggleImageUpload = document.getElementById('toggleImageUpload');
-const emojiButton = document.getElementById('emojiButton');
-const emojiPicker = document.getElementById('emojiPicker');
-const postFeed = document.getElementById('postFeed');
-const signOutBtn = document.getElementById('signOut');
+// Match these to your HTML
+const postContent = document.getElementById('postContent');    // textarea
+const postImage = document.getElementById('postImage');        // file input
+const submitPost = document.getElementById('submitPost');      // post button
+const postsDiv = document.getElementById('posts');             // container for posts
+const signOutBtn = document.getElementById('signOut');         // sign out button
 
-// Emoji picker setup
-let pickerVisible = false;
-emojiButton.addEventListener('click', () => {
-    if (!pickerVisible) {
-        emojiPicker.classList.remove('hidden');
-        new EmojiMart.Picker({
-            onEmojiSelect: emoji => {
-                postInput.value += emoji.native;
-            },
-            theme: 'light',
-            parent: emojiPicker
-        });
-    } else {
-        emojiPicker.innerHTML = '';
-        emojiPicker.classList.add('hidden');
-    }
-    pickerVisible = !pickerVisible;
-});
-
-// Show image upload
-toggleImageUpload.addEventListener('click', () => {
-    imageInput.click();
-});
-
-// Auth check
 onAuthStateChanged(auth, user => {
-    if (!user) window.location.href = 'signin.html';
+    if (!user) {
+        window.location.href = 'signin.html'; // Redirect if not signed in
+    }
 });
 
-// Handle post
-postButton.addEventListener('click', async () => {
+// Submit post (text + optional image)
+submitPost.addEventListener('click', async () => {
+    const content = postContent.value.trim();
+    const imageFile = postImage.files[0];
+
+    if (!content && !imageFile) return; // Don't post empty
+
     const user = auth.currentUser;
     if (!user) return;
 
-    const content = postInput.value.trim();
-    const file = imageInput.files[0];
+    const postRef = push(dbRef(database, 'posts'));
+    const postKey = postRef.key;
 
-    if (!content && !file) return;
-
-    const newPostRef = push(dbRef(database, 'posts'));
-    const postKey = newPostRef.key;
-
-    const postData = {
+    const newPost = {
         uid: user.uid,
         username: user.displayName || 'Anonymous',
-        content: content,
-        timestamp: Date.now()
+        content: content || '',
+        timestamp: Date.now(),
     };
 
-    await set(newPostRef, postData);
+    await set(postRef, newPost);
 
-    if (file) {
+    if (imageFile) {
         const imgRef = storageRef(storage, `postImages/${postKey}`);
-        await uploadBytes(imgRef, file);
+        await uploadBytes(imgRef, imageFile);
         const imageURL = await getDownloadURL(imgRef);
-        await update(newPostRef, { imageURL });
+        await update(postRef, { imageURL });
     }
 
-    postInput.value = '';
-    imageInput.value = '';
+    // Clear input fields
+    postContent.value = '';
+    postImage.value = '';
 });
 
-// Load posts
-onChildAdded(dbRef(database, 'posts'), (snapshot) => {
+// Realtime feed listener
+const postFeedRef = dbRef(database, 'posts');
+onChildAdded(postFeedRef, (snapshot) => {
     const post = snapshot.val();
 
-    const postEl = document.createElement('div');
-    postEl.className = 'post';
-    postEl.innerHTML = `
+    const postElement = document.createElement('div');
+    postElement.className = 'post';
+
+    postElement.innerHTML = `
         <strong>${post.username}</strong><br/>
         <p>${post.content}</p>
-        ${post.imageURL ? `<img src="${post.imageURL}" alt="Post image" style="max-width: 300px;" />` : ''}
+        ${post.imageURL ? `<img src="${post.imageURL}" alt="Post image" style="max-width: 300px; max-height: 300px;" />` : ''}
         <small>${new Date(post.timestamp).toLocaleString()}</small>
     `;
 
-    postFeed.prepend(postEl);
+    postsDiv.prepend(postElement);
 });
 
 // Sign out
