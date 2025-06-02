@@ -17,19 +17,16 @@
         </div>
 
         <div class="content">
-            <!-- New Post Input -->
             <div class="input-container">
-                <textarea id="postContent" placeholder="What's on your mind?"></textarea>
-                <button id="submitPost">Post</button>
+                <textarea id="postInput" placeholder="What's on your mind?"></textarea>
+                <button id="postButton">Post</button>
                 <button id="toggleImageUpload">Upload Image</button>
                 <button id="emojiButton">😊</button>
             </div>
 
-            <input type="file" id="postImage" accept="image/*" style="display: none;" />
-            <button id="sendImage" style="display: none;">Send Image</button>
+            <input type="file" id="imageInput" accept="image/*" style="display: none;" />
 
-            <!-- Posts Feed -->
-            <div id="posts" class="messages"></div>
+            <div id="postFeed" class="messages"></div>
         </div>
     </div>
 
