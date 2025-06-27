@@ -1,56 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Social Feed</title>
-    <link rel="stylesheet" href="styles.css" />
-    <link rel="manifest" href="manifest.json" />
-    <meta name="theme-color" content="#3b4cca" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/emoji-mart.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Social Feed</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#3b4cca" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/emoji-mart.css" />
+  <style>
+    .hidden { display: none; }
+    #imagePreview {
+      max-width: 300px;
+      max-height: 300px;
+      margin-top: 10px;
+      border: 1px solid #ccc;
+      display: none;
+    }
+  </style>
 </head>
 <body>
-    <div class="app">
-        <div class="sidebar">
-            <button id="toggleSidebar">Toggle Sidebar</button>
-            <button id="signOut">Sign Out</button>
-        </div>
-
-        <div class="content">
-            <!-- New Post Input -->
-            <div class="input-container">
-                <textarea id="postContent" placeholder="What's on your mind?"></textarea>
-                <button id="submitPost">Post</button>
-                <button id="toggleImageUpload">Upload Image</button>
-                <button id="emojiButton">😊</button>
-            </div>
-
-            <input type="file" id="postImage" accept="image/*" style="display: none;" />
-            <button id="sendImage" style="display: none;">Send Image</button>
-
-            <!-- Posts Feed -->
-            <div id="posts" class="messages"></div>
-        </div>
+  <div class="app">
+    <div class="sidebar">
+      <button id="toggleSidebar">Toggle Sidebar</button>
+      <button id="signOut">Sign Out</button>
     </div>
 
-    <div id="emojiPicker" class="hidden"></div>
+    <div class="content">
+      <!-- New Post Input -->
+      <div class="input-container">
+        <textarea id="postContent" placeholder="What's on your mind?"></textarea><br/>
+        <button id="submitPost">Post</button>
+        <button id="toggleImageUpload">Upload Image</button>
+        <button id="emojiButton">😊</button>
+        <input type="file" id="postImage" accept="image/*" style="display: none;" />
+        <img id="imagePreview" />
+      </div>
 
-    <!-- Firebase + Emoji Mart -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.js"></script>
+      <div id="emojiPicker" class="hidden"></div>
 
-    <script type="module" src="firebaseConfig.js"></script>
-    <script type="module" src="feed.js"></script>
+      <!-- Posts Feed -->
+      <div id="posts" class="messages"></div>
+    </div>
+  </div>
 
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('service-worker.js')
-                .then(reg => console.log('Service Worker registered:', reg.scope))
-                .catch(err => console.error('Service Worker failed:', err));
-        }
-    </script>
+  <!-- Firebase + Emoji Mart -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.js"></script>
+
+  <script type="module" src="firebaseConfig.js"></script>
+  <script type="module" src="feed.js"></script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(reg => console.log('Service Worker registered:', reg.scope))
+        .catch(err => console.error('Service Worker failed:', err));
+    }
+  </script>
 </body>
 </html>
