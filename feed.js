@@ -10,18 +10,28 @@ const submitPost = document.getElementById('submitPost');      // post button
 const postsDiv = document.getElementById('posts');             // container for posts
 const signOutBtn = document.getElementById('signOut');         // sign out button
 
+// 🔐 Redirect to sign-in if not logged in
 onAuthStateChanged(auth, user => {
     if (!user) {
-        window.location.href = 'signin.html'; // Redirect if not signed in
+        window.location.href = 'signin.html';
     }
 });
 
-// Submit post (text + optional image)
+// 🔗 Convert plain URLs into clickable links
+function linkify(text) {
+    const urlPattern = /(\b(https?:\/\/|www\.)[^\s<>]+(?:\.[^\s<>]+)*(?:\/[^\s<>]*)?)/gi;
+    return text.replace(urlPattern, (match) => {
+        const url = match.startsWith('http') ? match : `https://${match}`;
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer">${match}</a>`;
+    });
+}
+
+// ➕ Post content (text + optional image)
 submitPost.addEventListener('click', async () => {
     const content = postContent.value.trim();
     const imageFile = postImage.files[0];
 
-    if (!content && !imageFile) return; // Don't post empty
+    if (!content && !imageFile) return;
 
     const user = auth.currentUser;
     if (!user) return;
@@ -45,12 +55,12 @@ submitPost.addEventListener('click', async () => {
         await update(postRef, { imageURL });
     }
 
-    // Clear input fields
+    // Clear input
     postContent.value = '';
     postImage.value = '';
 });
 
-// Realtime feed listener
+// 📥 Realtime feed listener
 const postFeedRef = dbRef(database, 'posts');
 onChildAdded(postFeedRef, (snapshot) => {
     const post = snapshot.val();
@@ -58,9 +68,12 @@ onChildAdded(postFeedRef, (snapshot) => {
     const postElement = document.createElement('div');
     postElement.className = 'post';
 
+    // 🧠 Use linkify to convert URLs to clickable links
+    const linkedContent = linkify(post.content);
+
     postElement.innerHTML = `
         <strong>${post.username}</strong><br/>
-        <p>${post.content}</p>
+        <p>${linkedContent}</p>
         ${post.imageURL ? `<img src="${post.imageURL}" alt="Post image" style="max-width: 300px; max-height: 300px;" />` : ''}
         <small>${new Date(post.timestamp).toLocaleString()}</small>
     `;
@@ -68,7 +81,7 @@ onChildAdded(postFeedRef, (snapshot) => {
     postsDiv.prepend(postElement);
 });
 
-// Sign out
+// 🚪 Sign out
 signOutBtn.addEventListener('click', () => {
     signOut(auth).then(() => {
         window.location.href = 'index.html';
