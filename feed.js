@@ -117,3 +117,8 @@ signOutBtn.addEventListener('click', () => {
         window.location.href = 'index.html';
     });
 });
+
+document.getElementById('toggleSidebar').addEventListener('click', () => {
+  const sidebar = document.getElementById('sidebar');
+  sidebar.classList.toggle('collapsed');
+});
