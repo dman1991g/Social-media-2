@@ -31,16 +31,10 @@ submitPost.addEventListener('click', async () => {
     const content = postContent.value.trim();
     const imageFile = postImage.files[0];
 
-    if (!content && !imageFile) {
-        alert('Post must have text or an image.');
-        return;
-    }
+    if (!content && !imageFile) return;
 
     const user = auth.currentUser;
-    if (!user) {
-        alert('User not signed in.');
-        return;
-    }
+    if (!user) return;
 
     const postRef = push(dbRef(database, 'posts'));
     const postKey = postRef.key;
@@ -53,37 +47,24 @@ submitPost.addEventListener('click', async () => {
     };
 
     try {
-        alert('Saving post to database...');
-        await set(postRef, newPost);
-
+        // Upload image first if present
         if (imageFile) {
-            alert('Uploading image, please wait...');
             const imgRef = storageRef(storage, `postImages/${postKey}/image.jpg`);
             await uploadBytes(imgRef, imageFile);
-
-            alert('Image uploaded. Getting image URL...');
             const imageURL = await getDownloadURL(imgRef);
-
-            if (!imageURL) {
-                alert('Failed to get image URL.');
-                return;
-            }
-
-            alert('Saving image URL to database...');
-            await update(postRef, { imageURL });
-
-            alert('✅ Image URL saved to database!');
+            newPost.imageURL = imageURL;
         }
 
-        alert('✅ Post successfully uploaded!');
+        await set(postRef, newPost);
+
         postContent.value = '';
         postImage.value = '';
     } catch (error) {
-        alert('❌ Upload failed: ' + (error.message || error));
+        console.error('Upload failed:', error);
     }
 });
 
-// 📥 Realtime feed listener (new post)
+// 📥 Realtime feed listener (new posts)
 const postFeedRef = dbRef(database, 'posts');
 onChildAdded(postFeedRef, (snapshot) => {
     const post = snapshot.val();
@@ -98,17 +79,14 @@ onChildAdded(postFeedRef, (snapshot) => {
     postElement.innerHTML = `
         <strong>${post.username}</strong><br/>
         <p>${linkedContent}</p>
-        ${post.imageURL ? `
-            <p><a href="${post.imageURL}" target="_blank">Open Image</a></p>
-            <img src="${post.imageURL}" alt="Post image" style="max-width: 300px; border: 2px solid red; margin-top: 5px;" />
-        ` : '<em>No image</em>'}
+        ${post.imageURL ? `<img src="${post.imageURL}" alt="Post image" style="max-width: 300px; margin-top: 5px;" />` : ''}
         <small>${new Date(post.timestamp).toLocaleString()}</small>
     `;
 
     postsDiv.prepend(postElement);
 });
 
-// 🔄 Realtime update: when imageURL is added later
+// 🔄 Update post in DOM when imageURL is added later
 onChildChanged(postFeedRef, (snapshot) => {
     const post = snapshot.val();
     const postKey = snapshot.key;
@@ -116,16 +94,13 @@ onChildChanged(postFeedRef, (snapshot) => {
     const postElement = document.querySelector(`.post[data-key="${postKey}"]`);
     if (!postElement || !post.imageURL) return;
 
-    // Avoid duplicating image if it's already there
     const existingImage = postElement.querySelector('img');
     if (existingImage) return;
 
-    // Insert image before the timestamp
     const image = document.createElement('img');
     image.src = post.imageURL;
     image.alt = 'Post image';
     image.style.maxWidth = '300px';
-    image.style.border = '2px solid red';
     image.style.marginTop = '5px';
 
     const timestampElement = postElement.querySelector('small');
@@ -134,11 +109,6 @@ onChildChanged(postFeedRef, (snapshot) => {
     } else {
         postElement.appendChild(image);
     }
-
-    // Also add link (optional, matches debugging style)
-    const link = document.createElement('p');
-    link.innerHTML = `<a href="${post.imageURL}" target="_blank">Open Image</a>`;
-    postElement.insertBefore(link, image);
 });
 
 // 🚪 Sign out
