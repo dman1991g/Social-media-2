@@ -58,8 +58,6 @@ submitPost.addEventListener('click', async () => {
 
         if (imageFile) {
             alert('Uploading image, please wait...');
-            
-            // ✅ Use a subpath: postImages/{postKey}/image.jpg
             const imgRef = storageRef(storage, `postImages/${postKey}/image.jpg`);
             await uploadBytes(imgRef, imageFile);
 
@@ -86,7 +84,7 @@ submitPost.addEventListener('click', async () => {
     }
 });
 
-// 📥 Realtime feed listener
+// 📥 Realtime feed listener with image link + debug
 const postFeedRef = dbRef(database, 'posts');
 onChildAdded(postFeedRef, (snapshot) => {
     const post = snapshot.val();
@@ -94,14 +92,17 @@ onChildAdded(postFeedRef, (snapshot) => {
 
     const postElement = document.createElement('div');
     postElement.className = 'post';
-    postElement.setAttribute('data-key', postKey); // used for possible future updates
+    postElement.setAttribute('data-key', postKey);
 
     const linkedContent = linkify(post.content || '');
 
     postElement.innerHTML = `
         <strong>${post.username}</strong><br/>
         <p>${linkedContent}</p>
-        ${post.imageURL ? `<img src="${post.imageURL}" alt="Post image" style="max-width: 300px; border: 2px solid #ccc; margin-top: 5px;" />` : ''}
+        ${post.imageURL ? `
+            <p><a href="${post.imageURL}" target="_blank">Open Image</a></p>
+            <img src="${post.imageURL}" alt="Post image" style="max-width: 300px; border: 2px solid red; margin-top: 5px;" />
+        ` : '<em>No image</em>'}
         <small>${new Date(post.timestamp).toLocaleString()}</small>
     `;
 
