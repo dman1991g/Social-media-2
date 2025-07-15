@@ -80,8 +80,7 @@ submitPost.addEventListener('click', async () => {
         postContent.value = '';
         postImage.value = '';
     } catch (error) {
-        alert('❌ Upload failed. See console for details.');
-        console.error('Upload error:', error);
+        alert('❌ Upload failed: ' + (error.message || error));
     }
 });
 
