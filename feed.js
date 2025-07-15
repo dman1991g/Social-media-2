@@ -4,11 +4,11 @@ import { ref as dbRef, push, set, update, onChildAdded } from 'https://www.gstat
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js';
 
 // Match these to your HTML
-const postContent = document.getElementById('postContent');    // textarea
-const postImage = document.getElementById('postImage');        // file input
-const submitPost = document.getElementById('submitPost');      // post button
-const postsDiv = document.getElementById('posts');             // container for posts
-const signOutBtn = document.getElementById('signOut');         // sign out button
+const postContent = document.getElementById('postContent');
+const postImage = document.getElementById('postImage');
+const submitPost = document.getElementById('submitPost');
+const postsDiv = document.getElementById('posts');
+const signOutBtn = document.getElementById('signOut');
 
 // 🔐 Redirect to sign-in if not logged in
 onAuthStateChanged(auth, user => {
@@ -26,15 +26,21 @@ function linkify(text) {
     });
 }
 
-// ➕ Post content (text + optional image)
+// ➕ Post content (text + optional image) with mobile-friendly alerts
 submitPost.addEventListener('click', async () => {
     const content = postContent.value.trim();
     const imageFile = postImage.files[0];
 
-    if (!content && !imageFile) return;
+    if (!content && !imageFile) {
+        alert('Post must have text or an image.');
+        return;
+    }
 
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user) {
+        alert('User not signed in.');
+        return;
+    }
 
     const postRef = push(dbRef(database, 'posts'));
     const postKey = postRef.key;
@@ -46,18 +52,27 @@ submitPost.addEventListener('click', async () => {
         timestamp: Date.now(),
     };
 
-    await set(postRef, newPost);
+    try {
+        alert('Saving post to database...');
+        await set(postRef, newPost);
 
-    if (imageFile) {
-        const imgRef = storageRef(storage, `postImages/${postKey}`);
-        await uploadBytes(imgRef, imageFile);
-        const imageURL = await getDownloadURL(imgRef);
-        await update(postRef, { imageURL });
+        if (imageFile) {
+            alert('Uploading image, please wait...');
+            const imgRef = storageRef(storage, `postImages/${postKey}`);
+            await uploadBytes(imgRef, imageFile);
+            alert('Image uploaded. Getting image URL...');
+            const imageURL = await getDownloadURL(imgRef);
+
+            alert('Updating post with image URL...');
+            await update(postRef, { imageURL });
+        }
+
+        alert('Post successfully uploaded!');
+        postContent.value = '';
+        postImage.value = '';
+    } catch (error) {
+        alert('Something went wrong. Upload failed.');
     }
-
-    // Clear input
-    postContent.value = '';
-    postImage.value = '';
 });
 
 // 📥 Realtime feed listener
@@ -68,7 +83,6 @@ onChildAdded(postFeedRef, (snapshot) => {
     const postElement = document.createElement('div');
     postElement.className = 'post';
 
-    // 🧠 Use linkify to convert URLs to clickable links
     const linkedContent = linkify(post.content);
 
     postElement.innerHTML = `
