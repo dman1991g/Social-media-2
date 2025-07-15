@@ -1,6 +1,6 @@
 import { auth, database, storage } from './firebaseConfig.js';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js';
-import { ref as dbRef, push, set, update, onChildAdded } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
+import { ref as dbRef, push, set, onChildAdded } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js';
 
 // Match these to your HTML
@@ -47,14 +47,16 @@ submitPost.addEventListener('click', async () => {
     };
 
     try {
-        await set(postRef, newPost);
-
+        // If there's an image, upload it first and include the URL
         if (imageFile) {
             const imgRef = storageRef(storage, `postImages/${postKey}/image.jpg`);
             await uploadBytes(imgRef, imageFile);
             const imageURL = await getDownloadURL(imgRef);
-            await update(dbRef(database, `posts/${postKey}`), { imageURL });
+            newPost.imageURL = imageURL;
         }
+
+        // Save the complete post (with imageURL if available)
+        await set(postRef, newPost);
 
         postContent.value = '';
         postImage.value = '';
