@@ -26,21 +26,15 @@ function linkify(text) {
     });
 }
 
-// ➕ Post content (text + optional image) with alerts for mobile debugging
+// ➕ Post content (text + optional image)
 submitPost.addEventListener('click', async () => {
     const content = postContent.value.trim();
     const imageFile = postImage.files[0];
 
-    if (!content && !imageFile) {
-        alert('Post must have text or an image.');
-        return;
-    }
+    if (!content && !imageFile) return;
 
     const user = auth.currentUser;
-    if (!user) {
-        alert('User not signed in.');
-        return;
-    }
+    if (!user) return;
 
     const postRef = push(dbRef(database, 'posts'));
     const postKey = postRef.key;
@@ -53,30 +47,15 @@ submitPost.addEventListener('click', async () => {
     };
 
     try {
-        alert('Saving post to database...');
         await set(postRef, newPost);
 
         if (imageFile) {
-            alert('Uploading image, please wait...');
             const imgRef = storageRef(storage, `postImages/${postKey}/image.jpg`);
             await uploadBytes(imgRef, imageFile);
-
-            alert('Image uploaded. Getting image URL...');
             const imageURL = await getDownloadURL(imgRef);
-
-            if (!imageURL) {
-                alert('Failed to get image URL.');
-                return;
-            }
-
-            alert('Saving image URL to database...');
-            const postPathRef = dbRef(database, `posts/${postKey}`);
-            await update(postPathRef, { imageURL });
-
-            alert('✅ Image URL saved to database!');
+            await update(dbRef(database, `posts/${postKey}`), { imageURL });
         }
 
-        alert('✅ Post successfully uploaded!');
         postContent.value = '';
         postImage.value = '';
     } catch (error) {
@@ -84,7 +63,7 @@ submitPost.addEventListener('click', async () => {
     }
 });
 
-// 📥 Realtime feed listener with image link + debug
+// 📥 Realtime feed listener
 const postFeedRef = dbRef(database, 'posts');
 onChildAdded(postFeedRef, (snapshot) => {
     const post = snapshot.val();
@@ -99,10 +78,7 @@ onChildAdded(postFeedRef, (snapshot) => {
     postElement.innerHTML = `
         <strong>${post.username}</strong><br/>
         <p>${linkedContent}</p>
-        ${post.imageURL ? `
-            <p><a href="${post.imageURL}" target="_blank">Open Image</a></p>
-            <img src="${post.imageURL}" alt="Post image" style="max-width: 300px; border: 2px solid red; margin-top: 5px;" />
-        ` : '<em>No image</em>'}
+        ${post.imageURL ? `<img src="${post.imageURL}" alt="Post image" style="max-width: 300px; margin-top: 5px;" />` : ''}
         <small>${new Date(post.timestamp).toLocaleString()}</small>
     `;
 
