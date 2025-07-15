@@ -1,20 +1,23 @@
 import { auth, database, storage } from './firebaseConfig.js';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js';
-import { ref as dbRef, push, set, onChildAdded } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
+import { ref as dbRef, push, set, update, onChildAdded } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js';
 
-const postContent = document.getElementById('postContent');
-const postImage = document.getElementById('postImage');
-const submitPost = document.getElementById('submitPost');
-const postsDiv = document.getElementById('posts');
-const signOutBtn = document.getElementById('signOut');
+// Match these to your HTML
+const postContent = document.getElementById('postContent');    // textarea
+const postImage = document.getElementById('postImage');        // file input
+const submitPost = document.getElementById('submitPost');      // post button
+const postsDiv = document.getElementById('posts');             // container for posts
+const signOutBtn = document.getElementById('signOut');         // sign out button
 
+// 🔐 Redirect to sign-in if not logged in
 onAuthStateChanged(auth, user => {
     if (!user) {
         window.location.href = 'signin.html';
     }
 });
 
+// 🔗 Convert plain URLs into clickable links
 function linkify(text) {
     const urlPattern = /(\b(https?:\/\/|www\.)[^\s<>]+(?:\.[^\s<>]+)*(?:\/[^\s<>]*)?)/gi;
     return text.replace(urlPattern, (match) => {
@@ -23,38 +26,57 @@ function linkify(text) {
     });
 }
 
+// ➕ Post content (text + optional image) with alerts for mobile debugging
 submitPost.addEventListener('click', async () => {
     const content = postContent.value.trim();
     const imageFile = postImage.files[0];
 
-    if (!content && !imageFile) return;
+    if (!content && !imageFile) {
+        alert('Post must have text or an image.');
+        return;
+    }
 
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user) {
+        alert('User not signed in.');
+        return;
+    }
 
-    const postRef = push(dbRef(database, 'posts')); // 🔑 Create post key first
+    const postRef = push(dbRef(database, 'posts'));
     const postKey = postRef.key;
 
     const newPost = {
         uid: user.uid,
         username: user.displayName || 'Anonymous',
         content: content || '',
-        timestamp: Date.now()
+        timestamp: Date.now(),
     };
 
     try {
-        // ⬆️ Upload image first if there is one
-        if (imageFile) {
-            const imgRef = storageRef(storage, `postImages/${postKey}/image.jpg`);
-            await uploadBytes(imgRef, imageFile);
-            const imageURL = await getDownloadURL(imgRef);
-            newPost.imageURL = imageURL;
-        }
-
-        // ✅ Save full post (with imageURL if uploaded)
+        alert('Saving post to database...');
         await set(postRef, newPost);
 
-        // Clear inputs
+        if (imageFile) {
+            alert('Uploading image, please wait...');
+            const imgRef = storageRef(storage, `postImages/${postKey}/image.jpg`);
+            await uploadBytes(imgRef, imageFile);
+
+            alert('Image uploaded. Getting image URL...');
+            const imageURL = await getDownloadURL(imgRef);
+
+            if (!imageURL) {
+                alert('Failed to get image URL.');
+                return;
+            }
+
+            alert('Saving image URL to database...');
+            const postPathRef = dbRef(database, `posts/${postKey}`);
+            await update(postPathRef, { imageURL });
+
+            alert('✅ Image URL saved to database!');
+        }
+
+        alert('✅ Post successfully uploaded!');
         postContent.value = '';
         postImage.value = '';
     } catch (error) {
@@ -62,6 +84,7 @@ submitPost.addEventListener('click', async () => {
     }
 });
 
+// 📥 Realtime feed listener with image link + debug
 const postFeedRef = dbRef(database, 'posts');
 onChildAdded(postFeedRef, (snapshot) => {
     const post = snapshot.val();
@@ -76,13 +99,17 @@ onChildAdded(postFeedRef, (snapshot) => {
     postElement.innerHTML = `
         <strong>${post.username}</strong><br/>
         <p>${linkedContent}</p>
-        ${post.imageURL ? `<img src="${post.imageURL}" alt="Post image" style="max-width: 300px; margin-top: 5px;" />` : ''}
+        ${post.imageURL ? `
+            <p><a href="${post.imageURL}" target="_blank">Open Image</a></p>
+            <img src="${post.imageURL}" alt="Post image" style="max-width: 300px; border: 2px solid red; margin-top: 5px;" />
+        ` : '<em>No image</em>'}
         <small>${new Date(post.timestamp).toLocaleString()}</small>
     `;
 
     postsDiv.prepend(postElement);
 });
 
+// 🚪 Sign out
 signOutBtn.addEventListener('click', () => {
     signOut(auth).then(() => {
         window.location.href = 'index.html';
