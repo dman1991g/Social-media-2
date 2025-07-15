@@ -4,11 +4,11 @@ import { ref as dbRef, push, set, update, onChildAdded } from 'https://www.gstat
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js';
 
 // Match these to your HTML
-const postContent = document.getElementById('postContent');
-const postImage = document.getElementById('postImage');
-const submitPost = document.getElementById('submitPost');
-const postsDiv = document.getElementById('posts');
-const signOutBtn = document.getElementById('signOut');
+const postContent = document.getElementById('postContent');    // textarea
+const postImage = document.getElementById('postImage');        // file input
+const submitPost = document.getElementById('submitPost');      // post button
+const postsDiv = document.getElementById('posts');             // container for posts
+const signOutBtn = document.getElementById('signOut');         // sign out button
 
 // 🔐 Redirect to sign-in if not logged in
 onAuthStateChanged(auth, user => {
@@ -26,7 +26,7 @@ function linkify(text) {
     });
 }
 
-// ➕ Post content (text + optional image) with mobile-friendly alerts
+// ➕ Post content (text + optional image) with alerts for mobile debugging
 submitPost.addEventListener('click', async () => {
     const content = postContent.value.trim();
     const imageFile = postImage.files[0];
@@ -60,18 +60,28 @@ submitPost.addEventListener('click', async () => {
             alert('Uploading image, please wait...');
             const imgRef = storageRef(storage, `postImages/${postKey}`);
             await uploadBytes(imgRef, imageFile);
+
             alert('Image uploaded. Getting image URL...');
             const imageURL = await getDownloadURL(imgRef);
 
-            alert('Updating post with image URL...');
-            await update(postRef, { imageURL });
+            if (!imageURL) {
+                alert('Failed to get image URL.');
+                return;
+            }
+
+            alert('Saving image URL to database...');
+            const postPathRef = dbRef(database, `posts/${postKey}`);
+            await update(postPathRef, { imageURL });
+
+            alert('✅ Image URL saved to database!');
         }
 
-        alert('Post successfully uploaded!');
+        alert('✅ Post successfully uploaded!');
         postContent.value = '';
         postImage.value = '';
     } catch (error) {
-        alert('Something went wrong. Upload failed.');
+        alert('❌ Upload failed. See console for details.');
+        console.error('Upload error:', error);
     }
 });
 
@@ -79,16 +89,18 @@ submitPost.addEventListener('click', async () => {
 const postFeedRef = dbRef(database, 'posts');
 onChildAdded(postFeedRef, (snapshot) => {
     const post = snapshot.val();
+    const postKey = snapshot.key;
 
     const postElement = document.createElement('div');
     postElement.className = 'post';
+    postElement.setAttribute('data-key', postKey); // used for possible future updates
 
-    const linkedContent = linkify(post.content);
+    const linkedContent = linkify(post.content || '');
 
     postElement.innerHTML = `
         <strong>${post.username}</strong><br/>
         <p>${linkedContent}</p>
-        ${post.imageURL ? `<img src="${post.imageURL}" alt="Post image" style="max-width: 300px; max-height: 300px;" />` : ''}
+        ${post.imageURL ? `<img src="${post.imageURL}" alt="Post image" style="max-width: 300px; border: 2px solid #ccc; margin-top: 5px;" />` : ''}
         <small>${new Date(post.timestamp).toLocaleString()}</small>
     `;
 
