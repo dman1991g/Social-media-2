@@ -3,21 +3,18 @@ import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/
 import { ref as dbRef, push, set, onChildAdded } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js';
 
-// Match these to your HTML
-const postContent = document.getElementById('postContent');    // textarea
-const postImage = document.getElementById('postImage');        // file input
-const submitPost = document.getElementById('submitPost');      // post button
-const postsDiv = document.getElementById('posts');             // container for posts
-const signOutBtn = document.getElementById('signOut');         // sign out button
+const postContent = document.getElementById('postContent');
+const postImage = document.getElementById('postImage');
+const submitPost = document.getElementById('submitPost');
+const postsDiv = document.getElementById('posts');
+const signOutBtn = document.getElementById('signOut');
 
-// 🔐 Redirect to sign-in if not logged in
 onAuthStateChanged(auth, user => {
     if (!user) {
         window.location.href = 'signin.html';
     }
 });
 
-// 🔗 Convert plain URLs into clickable links
 function linkify(text) {
     const urlPattern = /(\b(https?:\/\/|www\.)[^\s<>]+(?:\.[^\s<>]+)*(?:\/[^\s<>]*)?)/gi;
     return text.replace(urlPattern, (match) => {
@@ -26,7 +23,6 @@ function linkify(text) {
     });
 }
 
-// ➕ Post content (text + optional image)
 submitPost.addEventListener('click', async () => {
     const content = postContent.value.trim();
     const imageFile = postImage.files[0];
@@ -36,18 +32,18 @@ submitPost.addEventListener('click', async () => {
     const user = auth.currentUser;
     if (!user) return;
 
-    const postRef = push(dbRef(database, 'posts'));
+    const postRef = push(dbRef(database, 'posts')); // 🔑 Create post key first
     const postKey = postRef.key;
 
     const newPost = {
         uid: user.uid,
         username: user.displayName || 'Anonymous',
         content: content || '',
-        timestamp: Date.now(),
+        timestamp: Date.now()
     };
 
     try {
-        // If there's an image, upload it first and include the URL
+        // ⬆️ Upload image first if there is one
         if (imageFile) {
             const imgRef = storageRef(storage, `postImages/${postKey}/image.jpg`);
             await uploadBytes(imgRef, imageFile);
@@ -55,9 +51,10 @@ submitPost.addEventListener('click', async () => {
             newPost.imageURL = imageURL;
         }
 
-        // Save the complete post (with imageURL if available)
+        // ✅ Save full post (with imageURL if uploaded)
         await set(postRef, newPost);
 
+        // Clear inputs
         postContent.value = '';
         postImage.value = '';
     } catch (error) {
@@ -65,7 +62,6 @@ submitPost.addEventListener('click', async () => {
     }
 });
 
-// 📥 Realtime feed listener
 const postFeedRef = dbRef(database, 'posts');
 onChildAdded(postFeedRef, (snapshot) => {
     const post = snapshot.val();
@@ -87,7 +83,6 @@ onChildAdded(postFeedRef, (snapshot) => {
     postsDiv.prepend(postElement);
 });
 
-// 🚪 Sign out
 signOutBtn.addEventListener('click', () => {
     signOut(auth).then(() => {
         window.location.href = 'index.html';
