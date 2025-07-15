@@ -11,11 +11,16 @@
 </head>
 <body>
     <div class="app">
-        <div class="sidebar">
-            <button id="toggleSidebar">Toggle Sidebar</button>
-            <button id="signOut">Sign Out</button>
-        </div>
+        <!-- Toggle Button -->
+<button id="toggleSidebar" class="sidebar-toggle">☰</button>
 
+<!-- Collapsible Sidebar -->
+<div id="sidebar" class="sidebar collapsed">
+  <button onclick="window.location.href='https://dman1991g.github.io/Real-time-multi-person-chat-app/'">
+    💬 Chat
+  </button>
+  <button id="signOut">🚪 Sign Out</button>
+</div>
         <div class="content">
             <!-- New Post Input -->
             <div class="input-container">
