@@ -58,7 +58,9 @@ submitPost.addEventListener('click', async () => {
 
         if (imageFile) {
             alert('Uploading image, please wait...');
-            const imgRef = storageRef(storage, `postImages/${postKey}`);
+            
+            // ✅ Use a subpath: postImages/{postKey}/image.jpg
+            const imgRef = storageRef(storage, `postImages/${postKey}/image.jpg`);
             await uploadBytes(imgRef, imageFile);
 
             alert('Image uploaded. Getting image URL...');
