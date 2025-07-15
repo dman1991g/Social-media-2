@@ -1,61 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Social Feed</title>
-    <link rel="stylesheet" href="styles.css" />
-    <link rel="manifest" href="manifest.json" />
-    <meta name="theme-color" content="#3b4cca" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/emoji-mart.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Social Feed</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-    <div class="app">
-        <!-- Toggle Button -->
-<button id="toggleSidebar" class="sidebar-toggle">☰</button>
+  <main>
+    <h1>Welcome to the Social Feed</h1>
 
-<!-- Collapsible Sidebar -->
-<div id="sidebar" class="sidebar collapsed">
-  <button onclick="window.location.href='https://dman1991g.github.io/Real-time-multi-person-chat-app/'">
-    💬 Chat
-  </button>
-  <button id="signOut">🚪 Sign Out</button>
-</div>
-        <div class="content">
-            <!-- New Post Input -->
-            <div class="input-container">
-                <textarea id="postContent" placeholder="What's on your mind?"></textarea>
-                <button id="submitPost">Post</button>
-                <button id="toggleImageUpload">Upload Image</button>
-                <button id="emojiButton">😊</button>
-            </div>
+    <!-- Sign Out Button -->
+    <button id="signOut">🚪 Sign Out</button>
 
-            <input type="file" id="postImage" accept="image/*">
-            <button id="sendImage" style="display: none;">Send Image</button>
+    <!-- Post Input -->
+    <section id="newPost">
+      <textarea id="postContent" placeholder="What's on your mind?"></textarea>
+      <input type="file" id="postImage" accept="image/*" />
+      <button id="submitPost">Post</button>
+    </section>
 
-            <!-- Posts Feed -->
-            <div id="posts" class="messages"></div>
-        </div>
-    </div>
+    <!-- Posts Display Area -->
+    <section id="posts">
+      <!-- Posts will appear here dynamically -->
+    </section>
 
-    <div id="emojiPicker" class="hidden"></div>
+    <!-- Optional: Link to Chat App -->
+    <a href="https://dman1991g.github.io/Real-time-multi-person-chat-app/" target="_blank" rel="noopener noreferrer">
+      💬 Go to Chat
+    </a>
+  </main>
 
-    <!-- Firebase + Emoji Mart -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.js"></script>
-
-    <script type="module" src="firebaseConfig.js"></script>
-    <script type="module" src="feed.js"></script>
-
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('service-worker.js')
-                .then(reg => console.log('Service Worker registered:', reg.scope))
-                .catch(err => console.error('Service Worker failed:', err));
-        }
-    </script>
+  <!-- Firebase & Scripts -->
+  <script type="module" src="firebaseConfig.js"></script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>
