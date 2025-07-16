@@ -1,7 +1,7 @@
 {
   "name": "Social Feed App",
   "short_name": "SocialFeed",
-  "start_url": "https://dman1991g.github.io/Social-media-2/index.html",
+  "start_url": "https://dman1991g.github.io/Social-media-2/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#3b4cca",
