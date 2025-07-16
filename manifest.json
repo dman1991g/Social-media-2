@@ -1,0 +1,21 @@
+{
+  "name": "Social Feed App",
+  "short_name": "SocialFeed",
+  "start_url": "https://dman1991g.github.io/Social-media/index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b4cca",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
