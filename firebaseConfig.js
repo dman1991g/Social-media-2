@@ -5,15 +5,15 @@ import { getDatabase } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-d
 import { getStorage } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js';  // Import getStorage
 
 // Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyCNU5uJ9YkR3F3BtghpRwIJ3TR6FaUFxTM",
-  authDomain: "real-time-chat-app-b5633.firebaseapp.com",
-  databaseURL: "https://real-time-chat-app-b5633-default-rtdb.firebaseio.com",
-  projectId: "real-time-chat-app-b5633",
-  storageBucket: "real-time-chat-app-b5633.appspot.com",
-  messagingSenderId: "598824406460",
-  appId: "1:598824406460:web:69dd525b78ada125be2fb9",
-  measurementId: "G-0RBBS9DMW7"
+  apiKey: "AIzaSyCJKPi-WkesRIZVUqVUOn3Nzxu8eAGMsdc",
+  authDomain: "trvia-game.firebaseapp.com",
+  projectId: "trvia-game",
+  storageBucket: "trvia-game.firebasestorage.app",
+  messagingSenderId: "752578431372",
+  appId: "1:752578431372:web:1cb44be093d20165452ea9",
+  measurementId: "G-GB72R4Y6FD"
 };
 
 // Initialize Firebase
