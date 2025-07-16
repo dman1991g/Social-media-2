@@ -1,6 +1,6 @@
 import { auth, database, storage } from './firebaseConfig.js';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js';
-import { ref as dbRef, push, set, update, onChildAdded } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
+import { ref as dbRef, push, set, update, onChildAdded, onChildChanged } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js';
 
 // Match to HTML elements
@@ -70,7 +70,6 @@ submitPost.addEventListener('click', async () => {
             alert('✅ Image URL added to post.');
         }
 
-        // Clear form
         postContent.value = '';
         postImage.value = '';
     } catch (error) {
@@ -79,13 +78,15 @@ submitPost.addEventListener('click', async () => {
     }
 });
 
-// Realtime feed listener
+// Display new posts as they're added
 const postFeedRef = dbRef(database, 'posts');
 onChildAdded(postFeedRef, (snapshot) => {
     const post = snapshot.val();
+    const postKey = snapshot.key;
 
     const postElement = document.createElement('div');
     postElement.className = 'post';
+    postElement.setAttribute('data-id', postKey);
 
     const linkedContent = linkify(post.content);
 
@@ -94,17 +95,32 @@ onChildAdded(postFeedRef, (snapshot) => {
         alert('📷 Displaying image: ' + post.imageURL);
         imageHTML = `<img src="${post.imageURL}" alt="Post image" style="max-width: 300px; max-height: 300px;" />`;
     } else {
-        alert('ℹ️ No image found for this post.');
+        alert('ℹ️ No image found for this post yet.');
     }
 
     postElement.innerHTML = `
         <strong>${post.username}</strong><br/>
         <p>${linkedContent}</p>
-        ${imageHTML}
+        <div class="post-image">${imageHTML}</div>
         <small>${new Date(post.timestamp).toLocaleString()}</small>
     `;
 
     postsDiv.prepend(postElement);
+});
+
+// Handle image being added later (after post text is already displayed)
+onChildChanged(postFeedRef, (snapshot) => {
+    const updatedPost = snapshot.val();
+    const postKey = snapshot.key;
+
+    const existingPost = document.querySelector(`.post[data-id="${postKey}"]`);
+    if (existingPost && updatedPost.imageURL) {
+        const postImageDiv = existingPost.querySelector('.post-image');
+        if (postImageDiv) {
+            postImageDiv.innerHTML = `<img src="${updatedPost.imageURL}" alt="Post image" style="max-width: 300px; max-height: 300px;" />`;
+            alert('🖼️ Image loaded into post after upload.');
+        }
+    }
 });
 
 // Sign out
