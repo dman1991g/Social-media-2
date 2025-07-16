@@ -1,141 +1,115 @@
 import { auth, database, storage } from './firebaseConfig.js';
-import {
-  onAuthStateChanged,
-  signOut
-} from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js';
-import {
-  ref as dbRef,
-  push,
-  set,
-  update,
-  get,
-  remove,
-  onChildAdded
-} from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
-import {
-  ref as storageRef,
-  uploadBytes,
-  getDownloadURL
-} from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js';
+import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js';
+import { ref as dbRef, push, set, update, onChildAdded } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js';
 
+// Match to HTML elements
 const postContent = document.getElementById('postContent');
 const postImage = document.getElementById('postImage');
 const submitPost = document.getElementById('submitPost');
 const postsDiv = document.getElementById('posts');
 const signOutBtn = document.getElementById('signOut');
-const openChatBtn = document.getElementById('openChatBtn');
 
 // Redirect if not logged in
 onAuthStateChanged(auth, user => {
-  if (!user) {
-    window.location.href = 'signin.html';
-  }
+    if (!user) {
+        window.location.href = 'signin.html';
+    }
 });
 
-// Turn links into clickable hyperlinks
+// Convert URLs into clickable links
 function linkify(text) {
-  const urlPattern = /(\b(https?:\/\/|www\.)[^\s<>]+(?:\.[^\s<>]+)*(?:\/[^\s<>]*)?)/gi;
-  return text.replace(urlPattern, (match) => {
-    const url = match.startsWith('http') ? match : `https://${match}`;
-    return `<a href="${url}" target="_blank" rel="noopener noreferrer">${match}</a>`;
-  });
+    const urlPattern = /(\b(https?:\/\/|www\.)[^\s<>]+(?:\.[^\s<>]+)*(?:\/[^\s<>]*)?)/gi;
+    return text.replace(urlPattern, (match) => {
+        const url = match.startsWith('http') ? match : `https://${match}`;
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer">${match}</a>`;
+    });
 }
 
-// Post submission
+// Post content (with optional image)
 submitPost.addEventListener('click', async () => {
-  const content = postContent.value.trim();
-  const imageFile = postImage.files[0];
+    const content = postContent.value.trim();
+    const imageFile = postImage.files[0];
 
-  if (!content && !imageFile) return;
-
-  const user = auth.currentUser;
-  if (!user) return;
-
-  const postRef = push(dbRef(database, 'posts'));
-  const postKey = postRef.key;
-
-  const newPost = {
-    uid: user.uid,
-    username: user.displayName || 'Anonymous',
-    content: content,
-    timestamp: Date.now()
-  };
-
-  await set(postRef, newPost);
-
-  if (imageFile) {
-    const imgRef = storageRef(storage, `postImages/${postKey}`);
-    await uploadBytes(imgRef, imageFile);
-    const imageURL = await getDownloadURL(imgRef);
-    await update(postRef, { imageURL });
-  }
-
-  postContent.value = '';
-  postImage.value = '';
-});
-
-// Display posts with Like buttons
-const postFeedRef = dbRef(database, 'posts');
-onChildAdded(postFeedRef, async (snapshot) => {
-  const post = snapshot.val();
-  const postId = snapshot.key;
-  const user = auth.currentUser;
-
-  const postElement = document.createElement('div');
-  postElement.className = 'post';
-
-  const likeCount = post.likes ? Object.keys(post.likes).length : 0;
-  const userLiked = post.likes && post.likes[user.uid];
-
-  const linkedContent = linkify(post.content);
-
-  postElement.innerHTML = `
-    <strong>${post.username}</strong><br/>
-    <p>${linkedContent}</p>
-    ${post.imageURL ? `<img src="${post.imageURL}" alt="Post image" style="max-width: 300px; max-height: 300px;" />` : ''}
-    <div>
-      <button class="likeBtn" data-post-id="${postId}">
-        ${userLiked ? '💙 Unlike' : '🤍 Like'}
-      </button>
-      <span class="likeCount">${likeCount} ${likeCount === 1 ? 'like' : 'likes'}</span>
-    </div>
-    <small>${new Date(post.timestamp).toLocaleString()}</small>
-  `;
-
-  postsDiv.prepend(postElement);
-
-  const likeBtn = postElement.querySelector('.likeBtn');
-  const likeCountSpan = postElement.querySelector('.likeCount');
-
-  likeBtn.addEventListener('click', async () => {
-    const likeRef = dbRef(database, `posts/${postId}/likes/${user.uid}`);
-    const currentLikeSnap = await get(likeRef);
-
-    if (currentLikeSnap.exists()) {
-      await remove(likeRef); // Unlike
-    } else {
-      await set(likeRef, true); // Like
+    if (!content && !imageFile) {
+        alert('Post content or image is required.');
+        return;
     }
 
-    // Refresh the like UI
-    const updatedPostSnap = await get(dbRef(database, `posts/${postId}`));
-    const updatedPost = updatedPostSnap.val();
-    const newLikeCount = updatedPost.likes ? Object.keys(updatedPost.likes).length : 0;
-    const hasLiked = updatedPost.likes && updatedPost.likes[user.uid];
+    const user = auth.currentUser;
+    if (!user) {
+        alert('You must be signed in to post.');
+        return;
+    }
 
-    likeBtn.textContent = hasLiked ? '💙 Unlike' : '🤍 Like';
-    likeCountSpan.textContent = `${newLikeCount} ${newLikeCount === 1 ? 'like' : 'likes'}`;
-  });
+    const postRef = push(dbRef(database, 'posts'));
+    const postKey = postRef.key;
+
+    const newPost = {
+        uid: user.uid,
+        username: user.displayName || 'Anonymous',
+        content: content || '',
+        timestamp: Date.now(),
+    };
+
+    try {
+        await set(postRef, newPost);
+        alert('✅ Post text saved to database.');
+
+        if (imageFile) {
+            const imgRef = storageRef(storage, `postImages/${postKey}/${imageFile.name}`);
+            alert('⏳ Uploading image...');
+
+            await uploadBytes(imgRef, imageFile);
+            alert('✅ Image uploaded successfully.');
+
+            const imageURL = await getDownloadURL(imgRef);
+            alert('🌐 Image URL retrieved: ' + imageURL);
+
+            await update(postRef, { imageURL });
+            alert('✅ Image URL added to post.');
+        }
+
+        // Clear form
+        postContent.value = '';
+        postImage.value = '';
+    } catch (error) {
+        alert('❌ Error during post: ' + error.message);
+        console.error(error);
+    }
+});
+
+// Realtime feed listener
+const postFeedRef = dbRef(database, 'posts');
+onChildAdded(postFeedRef, (snapshot) => {
+    const post = snapshot.val();
+
+    const postElement = document.createElement('div');
+    postElement.className = 'post';
+
+    const linkedContent = linkify(post.content);
+
+    let imageHTML = '';
+    if (post.imageURL) {
+        alert('📷 Displaying image: ' + post.imageURL);
+        imageHTML = `<img src="${post.imageURL}" alt="Post image" style="max-width: 300px; max-height: 300px;" />`;
+    } else {
+        alert('ℹ️ No image found for this post.');
+    }
+
+    postElement.innerHTML = `
+        <strong>${post.username}</strong><br/>
+        <p>${linkedContent}</p>
+        ${imageHTML}
+        <small>${new Date(post.timestamp).toLocaleString()}</small>
+    `;
+
+    postsDiv.prepend(postElement);
 });
 
 // Sign out
-signOutBtn?.addEventListener('click', () => {
-  signOut(auth).then(() => {
-    window.location.href = 'index.html';
-  });
-});
-
-// Open chat
-openChatBtn?.addEventListener('click', () => {
-  window.open('https://dman1991g.github.io/Real-time-multi-person-chat-app/', '_blank');
+signOutBtn.addEventListener('click', () => {
+    signOut(auth).then(() => {
+        window.location.href = 'index.html';
+    });
 });
