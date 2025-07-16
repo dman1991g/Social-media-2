@@ -1,113 +1,141 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { auth, database, storage } from './firebaseConfig.js';
 import {
-  getDatabase, ref, push, onChildAdded, update
-} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+  onAuthStateChanged,
+  signOut
+} from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js';
 import {
-  getAuth, onAuthStateChanged, signOut
-} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+  ref as dbRef,
+  push,
+  set,
+  update,
+  get,
+  remove,
+  onChildAdded
+} from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
 import {
-  getStorage, ref as storageRef, uploadBytes, getDownloadURL
-} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL
+} from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js';
 
-import { firebaseConfig } from './firebaseConfig.js';
+const postContent = document.getElementById('postContent');
+const postImage = document.getElementById('postImage');
+const submitPost = document.getElementById('submitPost');
+const postsDiv = document.getElementById('posts');
+const signOutBtn = document.getElementById('signOut');
+const openChatBtn = document.getElementById('openChatBtn');
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const auth = getAuth(app);
-const storage = getStorage(app);
-const postsRef = ref(db, 'posts');
-
-const postForm = document.getElementById('post-form');
-const postText = document.getElementById('post-text');
-const postImage = document.getElementById('post-image');
-const feed = document.getElementById('feed');
-const signOutBtn = document.getElementById('sign-out-btn');
-
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    loadPosts();
-  } else {
-    window.location.href = 'index.html';
+// Redirect if not logged in
+onAuthStateChanged(auth, user => {
+  if (!user) {
+    window.location.href = 'signin.html';
   }
 });
 
-signOutBtn.addEventListener('click', () => {
-  signOut(auth);
-});
+// Turn links into clickable hyperlinks
+function linkify(text) {
+  const urlPattern = /(\b(https?:\/\/|www\.)[^\s<>]+(?:\.[^\s<>]+)*(?:\/[^\s<>]*)?)/gi;
+  return text.replace(urlPattern, (match) => {
+    const url = match.startsWith('http') ? match : `https://${match}`;
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer">${match}</a>`;
+  });
+}
 
-postForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
+// Post submission
+submitPost.addEventListener('click', async () => {
+  const content = postContent.value.trim();
+  const imageFile = postImage.files[0];
+
+  if (!content && !imageFile) return;
+
   const user = auth.currentUser;
   if (!user) return;
 
-  const text = postText.value.trim();
-  const file = postImage.files[0];
-  postText.value = '';
-  postImage.value = '';
+  const postRef = push(dbRef(database, 'posts'));
+  const postKey = postRef.key;
 
-  let imageUrl = '';
-
-  if (file) {
-    const imageStorageRef = storageRef(storage, `images/${Date.now()}-${file.name}`);
-    try {
-      const snapshot = await uploadBytes(imageStorageRef, file);
-      imageUrl = await getDownloadURL(snapshot.ref);
-      alert('Image uploaded successfully');
-    } catch (err) {
-      alert('Image upload failed: ' + err.message);
-    }
-  } else {
-    alert('No image found for the post');
-  }
-
-  const post = {
+  const newPost = {
     uid: user.uid,
-    author: user.displayName || 'Anonymous',
-    text,
-    imageUrl,
-    timestamp: Date.now(),
-    likes: 0
+    username: user.displayName || 'Anonymous',
+    content: content,
+    timestamp: Date.now()
   };
 
-  try {
-    await push(postsRef, post);
-    alert('Post submitted successfully');
-  } catch (err) {
-    alert('Post failed: ' + err.message);
+  await set(postRef, newPost);
+
+  if (imageFile) {
+    const imgRef = storageRef(storage, `postImages/${postKey}`);
+    await uploadBytes(imgRef, imageFile);
+    const imageURL = await getDownloadURL(imgRef);
+    await update(postRef, { imageURL });
   }
+
+  postContent.value = '';
+  postImage.value = '';
 });
 
-function loadPosts() {
-  onChildAdded(postsRef, (snapshot) => {
-    const post = snapshot.val();
-    const postId = snapshot.key;
-    console.log('Loaded post:', post);
-    displayPost(post, postId);
-  });
-}
+// Display posts with Like buttons
+const postFeedRef = dbRef(database, 'posts');
+onChildAdded(postFeedRef, async (snapshot) => {
+  const post = snapshot.val();
+  const postId = snapshot.key;
+  const user = auth.currentUser;
 
-function displayPost(post, postId) {
-  const postDiv = document.createElement('div');
-  postDiv.classList.add('post');
+  const postElement = document.createElement('div');
+  postElement.className = 'post';
 
-  const content = `
-    <p><strong>${post.author}</strong></p>
-    <p>${post.text}</p>
-    ${post.imageUrl ? `<img src="${post.imageUrl}" alt="Post image" style="max-width:100%;">` : ''}
-    <div class="like-section">
-      <button class="like-button" data-id="${postId}">❤️ ${post.likes || 0}</button>
+  const likeCount = post.likes ? Object.keys(post.likes).length : 0;
+  const userLiked = post.likes && post.likes[user.uid];
+
+  const linkedContent = linkify(post.content);
+
+  postElement.innerHTML = `
+    <strong>${post.username}</strong><br/>
+    <p>${linkedContent}</p>
+    ${post.imageURL ? `<img src="${post.imageURL}" alt="Post image" style="max-width: 300px; max-height: 300px;" />` : ''}
+    <div>
+      <button class="likeBtn" data-post-id="${postId}">
+        ${userLiked ? '💙 Unlike' : '🤍 Like'}
+      </button>
+      <span class="likeCount">${likeCount} ${likeCount === 1 ? 'like' : 'likes'}</span>
     </div>
-    <hr>
+    <small>${new Date(post.timestamp).toLocaleString()}</small>
   `;
 
-  postDiv.innerHTML = content;
-  feed.prepend(postDiv);
+  postsDiv.prepend(postElement);
 
-  const likeBtn = postDiv.querySelector('.like-button');
-  likeBtn.addEventListener('click', () => {
-    const postRef = ref(db, `posts/${postId}`);
-    const newLikes = (post.likes || 0) + 1;
-    update(postRef, { likes: newLikes });
-    likeBtn.textContent = `❤️ ${newLikes}`;
+  const likeBtn = postElement.querySelector('.likeBtn');
+  const likeCountSpan = postElement.querySelector('.likeCount');
+
+  likeBtn.addEventListener('click', async () => {
+    const likeRef = dbRef(database, `posts/${postId}/likes/${user.uid}`);
+    const currentLikeSnap = await get(likeRef);
+
+    if (currentLikeSnap.exists()) {
+      await remove(likeRef); // Unlike
+    } else {
+      await set(likeRef, true); // Like
+    }
+
+    // Refresh the like UI
+    const updatedPostSnap = await get(dbRef(database, `posts/${postId}`));
+    const updatedPost = updatedPostSnap.val();
+    const newLikeCount = updatedPost.likes ? Object.keys(updatedPost.likes).length : 0;
+    const hasLiked = updatedPost.likes && updatedPost.likes[user.uid];
+
+    likeBtn.textContent = hasLiked ? '💙 Unlike' : '🤍 Like';
+    likeCountSpan.textContent = `${newLikeCount} ${newLikeCount === 1 ? 'like' : 'likes'}`;
   });
-}
+});
+
+// Sign out
+signOutBtn?.addEventListener('click', () => {
+  signOut(auth).then(() => {
+    window.location.href = 'index.html';
+  });
+});
+
+// Open chat
+openChatBtn?.addEventListener('click', () => {
+  window.open('https://dman1991g.github.io/Real-time-multi-person-chat-app/', '_blank');
+});
