@@ -1,29 +1,27 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import {
-  getDatabase,
-  ref,
-  push,
-  set,
-  onChildAdded,
-  update
+  getDatabase, ref, push, onChildAdded, update
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import {
-  getAuth,
-  onAuthStateChanged,
-  signOut
+  getAuth, onAuthStateChanged, signOut
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import {
+  getStorage, ref as storageRef, uploadBytes, getDownloadURL
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 
 import { firebaseConfig } from './firebaseConfig.js';
 
 const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
+const db = getDatabase(app);
 const auth = getAuth(app);
-const postsRef = ref(database, 'posts');
+const storage = getStorage(app);
+const postsRef = ref(db, 'posts');
 
 const postForm = document.getElementById('post-form');
-const postInput = document.getElementById('post-input');
+const postText = document.getElementById('post-text');
+const postImage = document.getElementById('post-image');
 const feed = document.getElementById('feed');
-const signOutButton = document.getElementById('sign-out');
+const signOutBtn = document.getElementById('sign-out-btn');
 
 onAuthStateChanged(auth, (user) => {
   if (user) {
@@ -33,63 +31,83 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-signOutButton.addEventListener('click', () => {
+signOutBtn.addEventListener('click', () => {
   signOut(auth);
 });
 
 postForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-
-  const postContent = postInput.value.trim();
-  if (!postContent) return;
-
   const user = auth.currentUser;
   if (!user) return;
 
-  const newPostRef = push(postsRef);
-  await set(newPostRef, {
+  const text = postText.value.trim();
+  const file = postImage.files[0];
+  postText.value = '';
+  postImage.value = '';
+
+  let imageUrl = '';
+
+  if (file) {
+    const imageStorageRef = storageRef(storage, `images/${Date.now()}-${file.name}`);
+    try {
+      const snapshot = await uploadBytes(imageStorageRef, file);
+      imageUrl = await getDownloadURL(snapshot.ref);
+      alert('Image uploaded successfully');
+    } catch (err) {
+      alert('Image upload failed: ' + err.message);
+    }
+  } else {
+    alert('No image found for the post');
+  }
+
+  const post = {
     uid: user.uid,
-    username: user.displayName || 'Anonymous',
-    content: postContent,
+    author: user.displayName || 'Anonymous',
+    text,
+    imageUrl,
     timestamp: Date.now(),
     likes: 0
-  });
+  };
 
-  postInput.value = '';
+  try {
+    await push(postsRef, post);
+    alert('Post submitted successfully');
+  } catch (err) {
+    alert('Post failed: ' + err.message);
+  }
 });
 
 function loadPosts() {
   onChildAdded(postsRef, (snapshot) => {
     const post = snapshot.val();
     const postId = snapshot.key;
+    console.log('Loaded post:', post);
     displayPost(post, postId);
   });
 }
 
 function displayPost(post, postId) {
-  const postElement = document.createElement('div');
-  postElement.classList.add('post');
+  const postDiv = document.createElement('div');
+  postDiv.classList.add('post');
 
-  const content = document.createElement('p');
-  content.textContent = post.content;
+  const content = `
+    <p><strong>${post.author}</strong></p>
+    <p>${post.text}</p>
+    ${post.imageUrl ? `<img src="${post.imageUrl}" alt="Post image" style="max-width:100%;">` : ''}
+    <div class="like-section">
+      <button class="like-button" data-id="${postId}">❤️ ${post.likes || 0}</button>
+    </div>
+    <hr>
+  `;
 
-  const username = document.createElement('span');
-  username.classList.add('username');
-  username.textContent = `Posted by: ${post.username}`;
+  postDiv.innerHTML = content;
+  feed.prepend(postDiv);
 
-  const likeButton = document.createElement('button');
-  likeButton.textContent = `❤️ ${post.likes || 0}`;
-  likeButton.addEventListener('click', () => {
-    const likesRef = ref(database, `posts/${postId}/likes`);
-    update(likesRef, {
-      '.value': (post.likes || 0) + 1
-    });
-    likeButton.textContent = `❤️ ${(post.likes || 0) + 1}`;
-    likeButton.disabled = true;
+  const likeBtn = postDiv.querySelector('.like-button');
+  likeBtn.addEventListener('click', () => {
+    const postRef = ref(db, `posts/${postId}`);
+    const newLikes = (post.likes || 0) + 1;
+    update(postRef, { likes: newLikes });
+    likeBtn.textContent = `❤️ ${newLikes}`;
   });
-
-  postElement.appendChild(content);
-  postElement.appendChild(username);
-  postElement.appendChild(likeButton);
-  feed.prepend(postElement);
 }
