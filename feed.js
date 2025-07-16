@@ -1,131 +1,95 @@
-import { auth, database, storage } from './firebaseConfig.js';
-import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js';
-import { ref as dbRef, push, set, update, onChildAdded, onChildChanged } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import {
+  getDatabase,
+  ref,
+  push,
+  set,
+  onChildAdded,
+  update
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
-// Match to HTML elements
-const postContent = document.getElementById('postContent');
-const postImage = document.getElementById('postImage');
-const submitPost = document.getElementById('submitPost');
-const postsDiv = document.getElementById('posts');
-const signOutBtn = document.getElementById('signOut');
+import { firebaseConfig } from './firebaseConfig.js';
 
-// Redirect if not logged in
-onAuthStateChanged(auth, user => {
-    if (!user) {
-        window.location.href = 'signin.html';
-    }
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+const auth = getAuth(app);
+const postsRef = ref(database, 'posts');
+
+const postForm = document.getElementById('post-form');
+const postInput = document.getElementById('post-input');
+const feed = document.getElementById('feed');
+const signOutButton = document.getElementById('sign-out');
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    loadPosts();
+  } else {
+    window.location.href = 'index.html';
+  }
 });
 
-// Convert URLs into clickable links
-function linkify(text) {
-    const urlPattern = /(\b(https?:\/\/|www\.)[^\s<>]+(?:\.[^\s<>]+)*(?:\/[^\s<>]*)?)/gi;
-    return text.replace(urlPattern, (match) => {
-        const url = match.startsWith('http') ? match : `https://${match}`;
-        return `<a href="${url}" target="_blank" rel="noopener noreferrer">${match}</a>`;
-    });
+signOutButton.addEventListener('click', () => {
+  signOut(auth);
+});
+
+postForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const postContent = postInput.value.trim();
+  if (!postContent) return;
+
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const newPostRef = push(postsRef);
+  await set(newPostRef, {
+    uid: user.uid,
+    username: user.displayName || 'Anonymous',
+    content: postContent,
+    timestamp: Date.now(),
+    likes: 0
+  });
+
+  postInput.value = '';
+});
+
+function loadPosts() {
+  onChildAdded(postsRef, (snapshot) => {
+    const post = snapshot.val();
+    const postId = snapshot.key;
+    displayPost(post, postId);
+  });
 }
 
-// Post content (with optional image)
-submitPost.addEventListener('click', async () => {
-    const content = postContent.value.trim();
-    const imageFile = postImage.files[0];
+function displayPost(post, postId) {
+  const postElement = document.createElement('div');
+  postElement.classList.add('post');
 
-    if (!content && !imageFile) {
-        alert('Post content or image is required.');
-        return;
-    }
+  const content = document.createElement('p');
+  content.textContent = post.content;
 
-    const user = auth.currentUser;
-    if (!user) {
-        alert('You must be signed in to post.');
-        return;
-    }
+  const username = document.createElement('span');
+  username.classList.add('username');
+  username.textContent = `Posted by: ${post.username}`;
 
-    const postRef = push(dbRef(database, 'posts'));
-    const postKey = postRef.key;
-
-    const newPost = {
-        uid: user.uid,
-        username: user.displayName || 'Anonymous',
-        content: content || '',
-        timestamp: Date.now(),
-    };
-
-    try {
-        await set(postRef, newPost);
-        alert('✅ Post text saved to database.');
-
-        if (imageFile) {
-            const imgRef = storageRef(storage, `postImages/${postKey}/${imageFile.name}`);
-            alert('⏳ Uploading image...');
-
-            await uploadBytes(imgRef, imageFile);
-            alert('✅ Image uploaded successfully.');
-
-            const imageURL = await getDownloadURL(imgRef);
-            alert('🌐 Image URL retrieved: ' + imageURL);
-
-            await update(postRef, { imageURL });
-            alert('✅ Image URL added to post.');
-        }
-
-        postContent.value = '';
-        postImage.value = '';
-    } catch (error) {
-        alert('❌ Error during post: ' + error.message);
-        console.error(error);
-    }
-});
-
-// Display new posts as they're added
-const postFeedRef = dbRef(database, 'posts');
-onChildAdded(postFeedRef, (snapshot) => {
-    const post = snapshot.val();
-    const postKey = snapshot.key;
-
-    const postElement = document.createElement('div');
-    postElement.className = 'post';
-    postElement.setAttribute('data-id', postKey);
-
-    const linkedContent = linkify(post.content);
-
-    let imageHTML = '';
-    if (post.imageURL) {
-        alert('📷 Displaying image: ' + post.imageURL);
-        imageHTML = `<img src="${post.imageURL}" alt="Post image" style="max-width: 300px; max-height: 300px;" />`;
-    } else {
-        alert('ℹ️ No image found for this post yet.');
-    }
-
-    postElement.innerHTML = `
-        <strong>${post.username}</strong><br/>
-        <p>${linkedContent}</p>
-        <div class="post-image">${imageHTML}</div>
-        <small>${new Date(post.timestamp).toLocaleString()}</small>
-    `;
-
-    postsDiv.prepend(postElement);
-});
-
-// Handle image being added later (after post text is already displayed)
-onChildChanged(postFeedRef, (snapshot) => {
-    const updatedPost = snapshot.val();
-    const postKey = snapshot.key;
-
-    const existingPost = document.querySelector(`.post[data-id="${postKey}"]`);
-    if (existingPost && updatedPost.imageURL) {
-        const postImageDiv = existingPost.querySelector('.post-image');
-        if (postImageDiv) {
-            postImageDiv.innerHTML = `<img src="${updatedPost.imageURL}" alt="Post image" style="max-width: 300px; max-height: 300px;" />`;
-            alert('🖼️ Image loaded into post after upload.');
-        }
-    }
-});
-
-// Sign out
-signOutBtn.addEventListener('click', () => {
-    signOut(auth).then(() => {
-        window.location.href = 'index.html';
+  const likeButton = document.createElement('button');
+  likeButton.textContent = `❤️ ${post.likes || 0}`;
+  likeButton.addEventListener('click', () => {
+    const likesRef = ref(database, `posts/${postId}/likes`);
+    update(likesRef, {
+      '.value': (post.likes || 0) + 1
     });
-});
+    likeButton.textContent = `❤️ ${(post.likes || 0) + 1}`;
+    likeButton.disabled = true;
+  });
+
+  postElement.appendChild(content);
+  postElement.appendChild(username);
+  postElement.appendChild(likeButton);
+  feed.prepend(postElement);
+}
